@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Wallet.DTOs;
 using Wallet.DTOs.Balance;
@@ -18,7 +19,6 @@ namespace Wallet.Controllers
             _balanceService = balanceService;
         }
 
-        // POST: api/balance/add/1
         [HttpPost("add/{clientId}")]
         public async Task<ActionResult<ResponseModel<BalanceDto>>> AddBalance(int clientId, [FromBody] decimal amount)
         {
@@ -26,11 +26,21 @@ namespace Wallet.Controllers
             return result.HttpStatusCode ? Ok(result) : BadRequest(result);
         }
 
-        // POST: api/balance/transfer
         [HttpPost("transfer")]
-        public async Task<ActionResult<ResponseModel<TransferResultDto>>> TransferBalance([FromBody] TransferRequestDto request)
+        public async Task<ActionResult<ResponseModel<TransactionHistoryModel>>> TransferBalance([FromBody] TransferRequestDto request)
         {
             var result = await _balanceService.TransferBalanceAsync(request);
+            return result.HttpStatusCode ? Ok(result) : BadRequest(result);
+        }
+
+        [HttpGet("transactions/{clientId}")]
+        public async Task<ActionResult<ResponseModel<PaginatedResultDto<TransferRequestDto>>>> GetTransactions(
+            int clientId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? type = null)
+        {
+            var result = await _balanceService.GetTransactionHistoryAsync(clientId, pageNumber, pageSize, type);
             return result.HttpStatusCode ? Ok(result) : BadRequest(result);
         }
     }

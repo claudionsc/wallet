@@ -11,7 +11,6 @@ namespace Wallet.DTOs.Balance
         public decimal FromNewBalance { get; set; }
 
         public int ToClientId { get; set; }
-        public decimal ToNewBalance { get; set; }
 
         public decimal TransferredAmount { get; set; }
     }

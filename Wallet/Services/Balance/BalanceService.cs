@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Wallet.Context;
 using Wallet.DTOs;
@@ -19,94 +21,191 @@ namespace Wallet.Services
 
         public async Task<ResponseModel<BalanceDto>> AddBalanceAsync(int clientId, decimal amount)
         {
-            var client = await _context.Clients.FindAsync(clientId);
-            if (client == null)
+            var response = new ResponseModel<BalanceDto>();
+
+            try
             {
-                return new ResponseModel<BalanceDto>
+                if (amount <= 0)
                 {
-                    HttpStatusCode = false,
-                    Message = "Cliente não encontrado",
-                    Data = null
-                };
+                    response.HttpStatusCode = false;
+                    response.Message = "O valor adicionado deve ser maior que zero.";
+                    return response;
+                }
+
+                var client = await _context.Clients.FindAsync(clientId);
+                if (client == null)
+                {
+                    response.HttpStatusCode = false;
+                    response.Message = "Cliente não encontrado.";
+                    return response;
+                }
+
+                client.Balance += amount;
+
+                _context.TransactionHistories.Add(new TransactionHistoryModel
+                {
+                    ClientId = client.Id,
+                    Amount = amount,
+                    Type = "add"
+                });
+
+                await _context.SaveChangesAsync();
+
+                response.HttpStatusCode = true;
+                response.Message = "Saldo adicionado com sucesso.";
+                response.Data = new BalanceDto { Balance = client.Balance };
+            }
+            catch (Exception ex)
+            {
+                response.HttpStatusCode = false;
+                response.Message = $"Erro ao adicionar saldo: {ex.Message}";
             }
 
-            client.Balance += amount;
-            await _context.SaveChangesAsync();
-
-            return new ResponseModel<BalanceDto>
-            {
-                HttpStatusCode = true,
-                Message = "Saldo adicionado com sucesso",
-                Data = new BalanceDto { Balance = client.Balance }
-            };
+            return response;
         }
 
         public async Task<ResponseModel<TransferResultDto>> TransferBalanceAsync(TransferRequestDto request)
         {
-            if (request.Amount <= 0)
+            var response = new ResponseModel<TransferResultDto>();
+
+            try
             {
-                return new ResponseModel<TransferResultDto>
+                if (request.Amount <= 0)
                 {
-                    HttpStatusCode = false,
-                    Message = "O valor da transferência deve ser maior que zero",
-                    Data = null
+                    response.HttpStatusCode = false;
+                    response.Message = "O valor da transferência deve ser maior que zero.";
+                    return response;
+                }
+
+                if (request.FromClientId == request.ToClientId)
+                {
+                    response.HttpStatusCode = false;
+                    response.Message = "Não é possível transferir para a mesma conta.";
+                    return response;
+                }
+
+                var fromClient = await _context.Clients.FindAsync(request.FromClientId);
+                var toClient = await _context.Clients.FindAsync(request.ToClientId);
+
+                if (fromClient == null || toClient == null)
+                {
+                    response.HttpStatusCode = false;
+                    response.Message = "Cliente de origem ou destino não encontrado.";
+                    return response;
+                }
+
+                if (fromClient.Balance < request.Amount)
+                {
+                    response.HttpStatusCode = false;
+                    response.Message = "Saldo insuficiente para realizar a transferência.";
+                    return response;
+                }
+
+                fromClient.Balance -= request.Amount;
+                toClient.Balance += request.Amount;
+
+                _context.TransactionHistories.Add(new TransactionHistoryModel
+                {
+                    ClientId = fromClient.Id,
+                    Amount = -request.Amount,
+                    Type = "transfer",
+                    ToClientId = toClient.Id
+                });
+
+                _context.TransactionHistories.Add(new TransactionHistoryModel
+                {
+                    ClientId = toClient.Id,
+                    Amount = request.Amount,
+                    Type = "transfer",
+                    ToClientId = fromClient.Id
+                });
+
+                await _context.SaveChangesAsync();
+
+                response.HttpStatusCode = true;
+                response.Message = "Transferência realizada com sucesso.";
+                response.Data = new TransferResultDto
+                {
+                    FromClientId = fromClient.Id,
+                    FromNewBalance = fromClient.Balance,
+                    ToClientId = toClient.Id,
+                    TransferredAmount = request.Amount
                 };
             }
-
-            if (request.FromClientId == request.ToClientId)
+            catch (Exception ex)
             {
-                return new ResponseModel<TransferResultDto>
-                {
-                    HttpStatusCode = false,
-                    Message = "Não é possível transferir para a mesma conta",
-                    Data = null
-                };
+                response.HttpStatusCode = false;
+                response.Message = $"Erro ao realizar transferência: {ex.Message}";
             }
 
-            var fromClient = await _context.Clients.FindAsync(request.FromClientId);
-            var toClient = await _context.Clients.FindAsync(request.ToClientId);
+            return response;
+        }
 
-            if (fromClient == null || toClient == null)
+        public async Task<ResponseModel<PaginatedResultDto<TransactionHistoryModel>>> GetTransactionHistoryAsync(
+            int clientId, int pageNumber, int pageSize, string? type = null)
+        {
+            var response = new ResponseModel<PaginatedResultDto<TransactionHistoryModel>>();
+
+            try
             {
-                return new ResponseModel<TransferResultDto>
+                var exists = await _context.Clients.AnyAsync(c => c.Id == clientId);
+                if (!exists)
                 {
-                    HttpStatusCode = false,
-                    Message = "Cliente de origem ou destino não encontrado",
-                    Data = null
+                    response.HttpStatusCode = false;
+                    response.Message = "Cliente não encontrado.";
+                    return response;
+                }
+
+                var query = _context.TransactionHistories
+                    .Where(t => t.ClientId == clientId);
+
+                if (!string.IsNullOrEmpty(type))
+                {
+                    type = type.ToLower();
+                    if (type != "add" && type != "transfer")
+                    {
+                        response.HttpStatusCode = false;
+                        response.Message = "Tipo de transação inválido. Use 'add' ou 'transfer'.";
+                        return response;
+                    }
+
+                    query = query.Where(t => t.Type == type);
+                }
+
+                var totalItems = await query.CountAsync();
+
+                var transactions = await query
+                    .OrderByDescending(t => t.Timestamp)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(t => new TransactionHistoryModel
+                    {
+                        Id = t.Id,
+                        ClientId = t.ClientId,
+                        Amount = t.Amount,
+                        Type = t.Type,
+                        ToClientId = t.ToClientId,
+                        Timestamp = t.Timestamp
+                    })
+                    .ToListAsync();
+
+                response.HttpStatusCode = true;
+                response.Message = "Transações encontradas com sucesso.";
+                response.Data = new PaginatedResultDto<TransactionHistoryModel>
+                {
+                    Items = transactions,
+                    TotalItems = totalItems,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
                 };
             }
-
-            if (fromClient.Balance < request.Amount)
+            catch (Exception ex)
             {
-                return new ResponseModel<TransferResultDto>
-                {
-                    HttpStatusCode = false,
-                    Message = "Saldo insuficiente para realizar a transferência",
-                    Data = null
-                };
+                response.HttpStatusCode = false;
+                response.Message = $"Erro ao buscar transações: {ex.Message}";
             }
 
-            // Realiza a transferência
-            fromClient.Balance -= request.Amount;
-            toClient.Balance += request.Amount;
-
-            await _context.SaveChangesAsync();
-
-            var result = new TransferResultDto
-            {
-                FromClientId = fromClient.Id,
-                FromNewBalance = fromClient.Balance,
-                ToClientId = toClient.Id,
-                ToNewBalance = toClient.Balance,
-                TransferredAmount = request.Amount
-            };
-
-            return new ResponseModel<TransferResultDto>
-            {
-                HttpStatusCode = true,
-                Message = "Transferência realizada com sucesso",
-                Data = result
-            };
+            return response;
         }
     }
 }

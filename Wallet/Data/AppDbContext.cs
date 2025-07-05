@@ -7,6 +7,7 @@ namespace Wallet.Context
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         public DbSet<ClientsModel> Clients { get; set; }
+        public DbSet<TransactionHistoryModel> TransactionHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
