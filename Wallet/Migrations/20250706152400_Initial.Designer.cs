@@ -12,8 +12,8 @@ using Wallet.Context;
 namespace Wallet.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250705023242_transferHistory")]
-    partial class transferHistory
+    [Migration("20250706152400_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,9 +44,9 @@ namespace Wallet.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Password")
+                    b.Property<byte[]>("Password")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("varbinary(max)");
 
                     b.HasKey("Id");
 

@@ -1,5 +1,6 @@
 ﻿using Wallet.Model;
 using Wallet.DTOs.Client;
+using Wallet.Models;
 
 namespace Wallet.Interfaces
 {
@@ -7,9 +8,9 @@ namespace Wallet.Interfaces
     {
         Task<ResponseModel<ClientResponseDTO>> UpdateClient(int id, ClientsDTO updatedClient);
         Task<ResponseModel<ClientsModel>> SearchClient(string email);
-        Task<ResponseModel<ClientResponseDTO>> CreateClient(ClientsDTO clientsDTO);
+        Task<ResponseModel<ClientToken>> CreateClient(ClientsDTO clientsDTO);
         
-        Task<ResponseModel<ClientResponseDTO>> Login(ClientLoginDTO clientLoginDTO);
+        Task<ResponseModel<ClientToken>> Login(ClientLoginDTO clientLoginDTO);
         
         Task<ResponseModel<ClientsModel>> DeleteClient(int id);
     }

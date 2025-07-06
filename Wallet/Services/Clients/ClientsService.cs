@@ -3,20 +3,25 @@ using Wallet.Context;
 using Wallet.DTOs.Client;
 using Wallet.Interfaces;
 using Wallet.Model;
+using Wallet.Models;
+using Wallet.Services.Auth;
+using Wallet.Utils;
 
 namespace Wallet.Services.Clients
 {
     public class ClientsService : IClientsService
     {
         private readonly AppDbContext _context;
-        public ClientsService(AppDbContext context)
+        private readonly JwtService _jwt;
+        public ClientsService(AppDbContext context, JwtService jwt)
         {
             _context = context;
+            _jwt = jwt;
         }
-
         public async Task<ResponseModel<ClientResponseDTO>> UpdateClient(int id, ClientsDTO updatedUser)
         {
             var resposta = new ResponseModel<ClientResponseDTO>();
+
             try
             {
                 var client = await _context.Clients.FirstOrDefaultAsync(u => u.Id == id);
@@ -29,7 +34,11 @@ namespace Wallet.Services.Clients
 
                 client.Name = updatedUser.Name;
                 client.Email = updatedUser.Email;
-                client.Password = updatedUser.Password;
+
+                if (!string.IsNullOrWhiteSpace(updatedUser.Password))
+                {
+                    client.Password = HashHelper.ComputeSha256Hash(updatedUser.Password);
+                }
 
                 _context.Clients.Update(client);
                 await _context.SaveChangesAsync();
@@ -79,28 +88,33 @@ namespace Wallet.Services.Clients
             return resposta;
         }
 
-        public async Task<ResponseModel<ClientResponseDTO>> CreateClient(ClientsDTO clientsDto)
+        public async Task<ResponseModel<ClientToken>> CreateClient(ClientsDTO clientsDto)
         {
-            var resposta = new ResponseModel<ClientResponseDTO>();
+            var resposta = new ResponseModel<ClientToken>();
 
             try
             {
+                var client = await _context.Clients.FirstOrDefaultAsync(x => x.Email == clientsDto.Email);
+
+                if (client != null)
+                {
+                    resposta.HttpStatusCode = false;
+                    resposta.Message = "Usuário já cadastrado";
+                    return resposta;
+                }
                 var clientEntity = new ClientsModel()
                 {
                     Name = clientsDto.Name,
                     Email = clientsDto.Email,
-                    Password = clientsDto.Password,
+                    Password = HashHelper.ComputeSha256Hash(clientsDto.Password),
                 };
 
                 _context.Clients.Add(clientEntity);
                 await _context.SaveChangesAsync();
 
-                resposta.Data = new ClientResponseDTO
-                {
-                    Id = clientEntity.Id,
-                    Name = clientEntity.Name,
-                    Email = clientEntity.Email,
-                };
+                var token = _jwt.GenerateToken(clientEntity);
+
+                resposta.Data = new ClientToken { Token = token };
                 resposta.Message = "Usuário criado com sucesso";
                 resposta.HttpStatusCode = true;
             }
@@ -113,9 +127,9 @@ namespace Wallet.Services.Clients
             return resposta;
         }
 
-        public async Task<ResponseModel<ClientResponseDTO>> Login(ClientLoginDTO clientLoginDTO)
+        public async Task<ResponseModel<ClientToken>> Login(ClientLoginDTO clientLoginDTO)
         {
-            var resposta = new ResponseModel<ClientResponseDTO>();
+            var resposta = new ResponseModel<ClientToken>();
 
             try
             {
@@ -128,22 +142,17 @@ namespace Wallet.Services.Clients
                     return resposta;
                 }
 
-                
-                if (client.Password != clientLoginDTO.Password)
+                var inputPasswordHash = HashHelper.ComputeSha256Hash(clientLoginDTO.Password);
+                if (!client.Password.SequenceEqual(inputPasswordHash))
                 {
                     resposta.HttpStatusCode = false;
                     resposta.Message = "Senha incorreta";
                     return resposta;
                 }
 
-                resposta.Data = new ClientResponseDTO
-                {
-                    Id = client.Id,
-                    Name = client.Name,
-                    Email = client.Email,
-                    Balance = client.Balance
-                };
+                var token = _jwt.GenerateToken(client);
 
+                resposta.Data = new ClientToken { Token = token };
                 resposta.Message = "Login realizado com sucesso";
                 resposta.HttpStatusCode = true;
             }

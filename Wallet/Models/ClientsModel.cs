@@ -12,7 +12,7 @@ namespace Wallet.Model
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Senha é obrigatória")]
-        public string Password { get; set; } = string.Empty;
+        public byte[] Password { get; set; }
         public decimal Balance { get; set; }
         public int Id { get; set; }
     }
