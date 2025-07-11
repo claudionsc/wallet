@@ -26,7 +26,7 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddAuthentication(options =>
 {
