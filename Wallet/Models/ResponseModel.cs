@@ -5,6 +5,6 @@ namespace Wallet.Model
     {
         public T? Data { get; set; }
         public string Message { get; set; } = string.Empty;
-        public bool HttpStatusCode { get; set; } = true;
+        public bool Success { get; set; } = true;
     }
 }

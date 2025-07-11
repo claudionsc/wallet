@@ -9,6 +9,7 @@ using Wallet.Services;
 using Wallet.Services.Auth;
 using Wallet.Services.Clients;
 using DotNetEnv;
+using Wallet.Middleware;
 
 Env.Load();
 
@@ -74,6 +75,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+app.UseAppSeeder();
 
 if (app.Environment.IsDevelopment())
 {

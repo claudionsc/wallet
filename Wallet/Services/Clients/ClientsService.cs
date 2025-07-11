@@ -28,7 +28,7 @@ namespace Wallet.Services.Clients
                 if (client == null)
                 {
                     resposta.Message = "Usuário não encontrado.";
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     return resposta;
                 }
 
@@ -50,12 +50,12 @@ namespace Wallet.Services.Clients
                     Email = client.Email,
                 };
                 resposta.Message = "Usuário atualizado com sucesso.";
-                resposta.HttpStatusCode = true;
+                resposta.Success = true;
             }
             catch (Exception ex)
             {
                 resposta.Message = ex.Message;
-                resposta.HttpStatusCode = false;
+                resposta.Success = false;
             }
 
             return resposta;
@@ -71,18 +71,18 @@ namespace Wallet.Services.Clients
                 if (client == null)
                 {
                     resposta.Message = "Nenhum registro localizado";
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     return resposta;
                 }
 
                 resposta.Data = client;
                 resposta.Message = "Usuário exibido com sucesso";
-                resposta.HttpStatusCode = true;
+                resposta.Success = true;
             }
             catch (Exception e)
             {
                 resposta.Message = e.Message;
-                resposta.HttpStatusCode = false;
+                resposta.Success = false;
             }
 
             return resposta;
@@ -98,7 +98,7 @@ namespace Wallet.Services.Clients
 
                 if (client != null)
                 {
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     resposta.Message = "Usuário já cadastrado";
                     return resposta;
                 }
@@ -116,12 +116,12 @@ namespace Wallet.Services.Clients
 
                 resposta.Data = new ClientToken { Token = token };
                 resposta.Message = "Usuário criado com sucesso";
-                resposta.HttpStatusCode = true;
+                resposta.Success = true;
             }
             catch (Exception e)
             {
                 resposta.Message = e.Message;
-                resposta.HttpStatusCode = false;
+                resposta.Success = false;
             }
 
             return resposta;
@@ -137,7 +137,7 @@ namespace Wallet.Services.Clients
 
                 if (client == null)
                 {
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     resposta.Message = "Usuário não existe";
                     return resposta;
                 }
@@ -145,7 +145,7 @@ namespace Wallet.Services.Clients
                 var inputPasswordHash = HashHelper.ComputeSha256Hash(clientLoginDTO.Password);
                 if (!client.Password.SequenceEqual(inputPasswordHash))
                 {
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     resposta.Message = "Senha incorreta";
                     return resposta;
                 }
@@ -154,12 +154,12 @@ namespace Wallet.Services.Clients
 
                 resposta.Data = new ClientToken { Token = token };
                 resposta.Message = "Login realizado com sucesso";
-                resposta.HttpStatusCode = true;
+                resposta.Success = true;
             }
             catch (Exception e)
             {
                 resposta.Message = e.Message;
-                resposta.HttpStatusCode = false;
+                resposta.Success = false;
             }
 
             return resposta;
@@ -176,7 +176,7 @@ namespace Wallet.Services.Clients
                 if (client == null)
                 {
                     resposta.Message = "Usuário não encontrado";
-                    resposta.HttpStatusCode = false;
+                    resposta.Success = false;
                     return resposta;
                 }
 
@@ -184,12 +184,12 @@ namespace Wallet.Services.Clients
                 await _context.SaveChangesAsync();
 
                 resposta.Message = "Usuário excluído com sucesso";
-                resposta.HttpStatusCode = true;
+                resposta.Success = true;
             }
             catch (Exception e)
             {
                 resposta.Message = e.Message;
-                resposta.HttpStatusCode = false;
+                resposta.Success = false;
             }
 
             return resposta;

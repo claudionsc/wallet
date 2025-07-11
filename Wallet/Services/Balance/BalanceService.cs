@@ -27,7 +27,7 @@ namespace Wallet.Services
             {
                 if (amount <= 0)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "O valor adicionado deve ser maior que zero.";
                     return response;
                 }
@@ -35,7 +35,7 @@ namespace Wallet.Services
                 var client = await _context.Clients.FindAsync(clientId);
                 if (client == null)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "Cliente não encontrado.";
                     return response;
                 }
@@ -51,13 +51,13 @@ namespace Wallet.Services
 
                 await _context.SaveChangesAsync();
 
-                response.HttpStatusCode = true;
+                response.Success = true;
                 response.Message = "Saldo adicionado com sucesso.";
                 response.Data = new BalanceDto { Balance = client.Balance };
             }
             catch (Exception ex)
             {
-                response.HttpStatusCode = false;
+                response.Success = false;
                 response.Message = $"Erro ao adicionar saldo: {ex.Message}";
             }
 
@@ -72,14 +72,14 @@ namespace Wallet.Services
             {
                 if (request.Amount <= 0)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "O valor da transferência deve ser maior que zero.";
                     return response;
                 }
 
                 if (request.FromClientId == request.ToClientId)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "Não é possível transferir para a mesma conta.";
                     return response;
                 }
@@ -89,14 +89,14 @@ namespace Wallet.Services
 
                 if (fromClient == null || toClient == null)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "Cliente de origem ou destino não encontrado.";
                     return response;
                 }
 
                 if (fromClient.Balance < request.Amount)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "Saldo insuficiente para realizar a transferência.";
                     return response;
                 }
@@ -122,7 +122,7 @@ namespace Wallet.Services
 
                 await _context.SaveChangesAsync();
 
-                response.HttpStatusCode = true;
+                response.Success = true;
                 response.Message = "Transferência realizada com sucesso.";
                 response.Data = new TransferResultDto
                 {
@@ -134,7 +134,7 @@ namespace Wallet.Services
             }
             catch (Exception ex)
             {
-                response.HttpStatusCode = false;
+                response.Success = false;
                 response.Message = $"Erro ao realizar transferência: {ex.Message}";
             }
 
@@ -151,7 +151,7 @@ namespace Wallet.Services
                 var exists = await _context.Clients.AnyAsync(c => c.Id == clientId);
                 if (!exists)
                 {
-                    response.HttpStatusCode = false;
+                    response.Success = false;
                     response.Message = "Cliente não encontrado.";
                     return response;
                 }
@@ -164,7 +164,7 @@ namespace Wallet.Services
                     type = type.ToLower();
                     if (type != "add" && type != "transfer")
                     {
-                        response.HttpStatusCode = false;
+                        response.Success = false;
                         response.Message = "Tipo de transação inválido. Use 'add' ou 'transfer'.";
                         return response;
                     }
@@ -189,7 +189,7 @@ namespace Wallet.Services
                     })
                     .ToListAsync();
 
-                response.HttpStatusCode = true;
+                response.Success = true;
                 response.Message = "Transações encontradas com sucesso.";
                 response.Data = new PaginatedResultDto<TransactionHistoryModel>
                 {
@@ -201,7 +201,7 @@ namespace Wallet.Services
             }
             catch (Exception ex)
             {
-                response.HttpStatusCode = false;
+                response.Success = false;
                 response.Message = $"Erro ao buscar transações: {ex.Message}";
             }
 

@@ -25,7 +25,7 @@ namespace Wallet.Controllers
         public async Task<ActionResult<ResponseModel<BalanceDto>>> AddBalance(int clientId, [FromBody] decimal amount)
         {
             var result = await _balanceService.AddBalanceAsync(clientId, amount);
-            return result.HttpStatusCode ? Ok(result) : BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
 
         [Authorize]
@@ -33,7 +33,7 @@ namespace Wallet.Controllers
         public async Task<ActionResult<ResponseModel<TransactionHistoryModel>>> TransferBalance([FromBody] TransferRequestDto request)
         {
             var result = await _balanceService.TransferBalanceAsync(request);
-            return result.HttpStatusCode ? Ok(result) : BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
 
 
@@ -46,7 +46,7 @@ namespace Wallet.Controllers
             [FromQuery] string? type = null)
         {
             var result = await _balanceService.GetTransactionHistoryAsync(clientId, pageNumber, pageSize, type);
-            return result.HttpStatusCode ? Ok(result) : BadRequest(result);
+            return result.Success ? Ok(result) : BadRequest(result);
         }
     }
 }
