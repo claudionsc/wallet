@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.DTOs.Client;
 using Wallet.Interfaces;
@@ -29,6 +30,8 @@ namespace Wallet.Controllers
             var user = await _clients.CreateClient(clientsDTO);
             return Ok(user);
         } 
+
+        [Authorize]
         [HttpPut("update/{id}")]
         public async Task<ActionResult<ResponseModel<ClientsDTO>>> UpdateUser(int id, ClientsDTO clientsObj)
         {
@@ -43,6 +46,7 @@ namespace Wallet.Controllers
             return Ok(login);
         }
 
+        [Authorize]
         [HttpDelete("delete/{id}")]
         public async Task<ActionResult<ResponseModel<ClientsModel>>> Delete(int id)
         {

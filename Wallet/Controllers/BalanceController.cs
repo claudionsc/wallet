@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace Wallet.Controllers
             _balanceService = balanceService;
         }
 
+        [Authorize]
         [HttpPost("add/{clientId}")]
         public async Task<ActionResult<ResponseModel<BalanceDto>>> AddBalance(int clientId, [FromBody] decimal amount)
         {
@@ -26,6 +28,7 @@ namespace Wallet.Controllers
             return result.HttpStatusCode ? Ok(result) : BadRequest(result);
         }
 
+        [Authorize]
         [HttpPost("transfer")]
         public async Task<ActionResult<ResponseModel<TransactionHistoryModel>>> TransferBalance([FromBody] TransferRequestDto request)
         {
@@ -33,6 +36,8 @@ namespace Wallet.Controllers
             return result.HttpStatusCode ? Ok(result) : BadRequest(result);
         }
 
+
+        [Authorize]
         [HttpGet("transactions/{clientId}")]
         public async Task<ActionResult<ResponseModel<PaginatedResultDto<TransferRequestDto>>>> GetTransactions(
             int clientId,
