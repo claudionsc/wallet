@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Wallet.DTOs;
 using Wallet.DTOs.Balance;
+using Wallet.DTOs.Filter;
 using Wallet.Interfaces;
 using Wallet.Model;
 
@@ -38,14 +39,15 @@ namespace Wallet.Controllers
 
 
         [Authorize]
-        [HttpGet("transactions/{clientId}")]
+        [HttpGet("get")]
         public async Task<ActionResult<ResponseModel<PaginatedResultDto<TransferRequestDto>>>> GetTransactions(
-            int clientId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
+            [FromQuery] TransactionFilterDateDTO? filter = null,
             [FromQuery] string? type = null)
         {
-            var result = await _balanceService.GetTransactionHistoryAsync(clientId, pageNumber, pageSize, type);
+            var clientId = int.Parse(User.FindFirst("id")!.Value);
+            var result = await _balanceService.GetTransactionHistoryAsync(clientId, pageNumber, pageSize, type, filter);
             return result.Success ? Ok(result) : BadRequest(result);
         }
     }

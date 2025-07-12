@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Wallet.Context;
 using Wallet.DTOs;
 using Wallet.DTOs.Balance;
+using Wallet.DTOs.Filter;
 using Wallet.Interfaces;
 using Wallet.Model;
 
@@ -141,8 +142,9 @@ namespace Wallet.Services
             return response;
         }
 
+
         public async Task<ResponseModel<PaginatedResultDto<TransactionHistoryModel>>> GetTransactionHistoryAsync(
-            int clientId, int pageNumber, int pageSize, string? type = null)
+            int clientId, int pageNumber, int pageSize, string? type = null, TransactionFilterDateDTO? filter = null)
         {
             var response = new ResponseModel<PaginatedResultDto<TransactionHistoryModel>>();
 
@@ -157,8 +159,10 @@ namespace Wallet.Services
                 }
 
                 var query = _context.TransactionHistories
-                    .Where(t => t.ClientId == clientId);
+                    .Where(t => t.ClientId == clientId || t.ToClientId == clientId)
+                    .AsQueryable();
 
+                // Filtro por tipo
                 if (!string.IsNullOrEmpty(type))
                 {
                     type = type.ToLower();
@@ -172,22 +176,51 @@ namespace Wallet.Services
                     query = query.Where(t => t.Type == type);
                 }
 
+                // Filtro por data
+                if (filter?.StartDate.HasValue == true)
+                {
+                    var startUtc = DateTime.SpecifyKind(filter.StartDate.Value, DateTimeKind.Utc);
+                    query = query.Where(t => t.Timestamp >= startUtc);
+                }
+
+                if (filter?.EndDate.HasValue == true)
+                {
+                    var endDate = filter.EndDate.Value;
+
+                    // Se a hora for zero (meia-noite), atualiza para a hora atual UTC
+                    if (endDate.TimeOfDay == TimeSpan.Zero)
+                    {
+                        var nowUtc = DateTime.UtcNow;
+                        // Usa a data do EndDate, mas substitui hora, minuto, segundo pela hora atual
+                        endDate = new DateTime(endDate.Year, endDate.Month, endDate.Day,
+                                               nowUtc.Hour, nowUtc.Minute, nowUtc.Second, DateTimeKind.Utc);
+                    }
+                    else
+                    {
+                        // Apenas garantir que seja UTC
+                        endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
+                    }
+
+                    query = query.Where(t => t.Timestamp <= endDate);
+                }
+                else
+                {
+                    // Se EndDate não informado, usa a hora atual UTC
+                    var nowUtc = DateTime.UtcNow;
+                    query = query.Where(t => t.Timestamp <= nowUtc);
+                }
+
+
                 var totalItems = await query.CountAsync();
 
                 var transactions = await query
-                    .OrderByDescending(t => t.Timestamp)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .Select(t => new TransactionHistoryModel
-                    {
-                        Id = t.Id,
-                        ClientId = t.ClientId,
-                        Amount = t.Amount,
-                        Type = t.Type,
-                        ToClientId = t.ToClientId,
-                        Timestamp = t.Timestamp
-                    })
-                    .ToListAsync();
+                .OrderByDescending(t => t.Timestamp) // Ordena as transações da mais recente para a mais antiga
+
+                // Ignora os registros das páginas anteriores
+                // Exemplo: pageNumber = 2, pageSize = 10 => pula os 10 primeiros registros
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize) // Pega apenas a quantidade de registros da página atual
+                .ToListAsync();
 
                 response.Success = true;
                 response.Message = "Transações encontradas com sucesso.";
